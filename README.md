@@ -1,5 +1,7 @@
 # Clipboard Inspector
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/danburzo/clipboard-inspector.svg)](https://greenkeeper.io/)
+
 Working with the clipboard in web browsers is subject to many inconsistencies. This tool helps you explore the content of the clipboard when you paste something on a web page.
 
 Run it online: [https://danburzo.github.io/clipboard-inspector/](https://danburzo.github.io/clipboard-inspector/)
