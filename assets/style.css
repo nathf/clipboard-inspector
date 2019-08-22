@@ -97,3 +97,20 @@ td img {
 	text-decoration: underline;
 	text-align: left;
 }
+
+.warning {
+	background: lightyellow;
+	padding: 15px 10px;
+	border: 1px solid #a2a225;
+	border-radius: 3px;
+}
+
+.warning code {
+	background: rgb(236, 236, 236);
+	padding: 2px 3px;
+	border-radius: 3px;
+}
+
+.warning p {
+	margin: 0;
+}

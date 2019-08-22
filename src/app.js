@@ -30,7 +30,14 @@ function copyToClipboard(data) {
   // chrome can throw an exception if the document isnt focused
   // while trying to programmatically copy
   document.body.focus();
-  navigator.clipboard.writeText(data).then(
+  let writePromise;
+  if (typeof data === "string") {
+    writePromise = navigator.clipboard.writeText(data);
+  } else {
+    writePromise = navigator.clipboard.write(data);
+  }
+
+  writePromise.then(
     function() {
       console.log("copied");
     },
@@ -112,8 +119,40 @@ function ClipboardInspectorr() {
 
 function ClipboardSummary({ summary, label }) {
   const [formatByType, setFormatByType] = useState(false);
+
+  let originalClipboardTransfer = new DataTransfer();
+  summary.data_by_type.forEach(obj =>
+    originalClipboardTransfer.items.add(obj.type, obj.data)
+  );
+
   return (
     <div className="clipboard-summary">
+      <div className="warning">
+        <p>
+          <strong>Note:</strong> using{" "}
+          <code
+            style={{
+              background: "#ececec",
+              padding: "2px 3px",
+              borderRadius: "3px"
+            }}
+          >
+            Copy raw data
+          </code>{" "}
+          will override your clipboard contents
+        </p>
+        <p>
+          {/* 
+					Can't seem to get the clipboard API to write a data transfer
+					<button
+            onClick={() => {
+              copyToClipboard(originalClipboardTransfer);
+            }}
+          >
+            Restore clipboard contents
+          </button> */}
+        </p>
+      </div>
       <h1>
         <a
           className="mdn"
