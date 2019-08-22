@@ -1,190 +1,320 @@
-import ReactDOM from 'react-dom';
-import React from 'react';
+import ReactDOM from "react-dom";
+import React, { useEffect, useState } from "react";
+import prettier from "prettier/standalone";
+import parserHtml from "prettier/parser-html";
 
 function file_info(file) {
-	return file ? {
-		name: file.name,
-		size: file.size,
-		type: file.type,
-		url: URL.createObjectURL(file)
-	} : null
+  return file
+    ? {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        url: URL.createObjectURL(file)
+      }
+    : null;
 }
 
-class ClipboardInspector extends React.Component {
-
-	render_file(file) {
-		return file ? <table>
-			<thead>
-				<tr>
-					<th>Name</th>
-					<th>Size</th>
-					<th>Type</th>
-					<th><a className='mdn' href='https://developer.mozilla.org/en-US/docs/Web/API/URL/createObjectURL'>URL.createObjectURL(file)</a></th>
-				</tr>
-			</thead>
-			<tbody>
-				<tr>
-					<td><code>{file.name}</code></td>
-					<td><code>{file.size}</code></td>
-					<td><code>{file.type}</code></td>
-					<td><code><a href={file.url}><img src={file.url}/></a></code></td>
-				</tr>
-			</tbody>
-		</table> : <em>N/A</em>;
-	}
-
-	render() {
-		let { data_transfer, label } = this.props;
-
-		var render_data = null;
-
-		if (event) {
-			render_data = {
-				data_by_type: Array.from(data_transfer.types).map(type => {
-					let data = data_transfer.getData(type);
-					return {
-						type: type,
-						data: data
-					}
-				}),
-				items: data_transfer.items ? 
-					Array.from(data_transfer.items).map(item => {
-						return {
-							kind: item.kind,
-							type: item.type,
-							as_file: file_info(item.getAsFile())
-						};
-					}) 
-					:
-					null,
-				files: data_transfer.files ? 
-					Array.from(data_transfer.files).map(file => {
-						return file_info(file)
-					}) 
-					:
-					null
-			}
-		}
-
-		return render_data ? 
-		
-			<div className='clipboard-summary'>
-				<h1>
-					<a className='mdn' href='https://developer.mozilla.org/en-US/docs/Web/API/DataTransfer'>event.{ label }</a> contains:
-				</h1>
-
-				<div className='clipboard-section'>
-					<h2>
-						<a className='mdn' href='https://developer.mozilla.org/en-US/docs/Web/API/DataTransfer/types'>.types</a>
-						<span className='anno'>{render_data.data_by_type.length} type(s) available</span>
-					</h2>
-					<table>
-						<thead>
-							<tr>
-								<th>type</th>
-								<th>
-									<a className='mdn' href='https://developer.mozilla.org/en-US/docs/Web/API/DataTransfer/getData'>getData(type)</a>
-								</th>
-							</tr>
-						</thead>
-						<tbody>
-						{ 
-							render_data.data_by_type.map((obj,idx) => 
-								<tr key={idx}>
-									<td><code>{obj.type}</code></td>
-									<td><pre><code>{obj.data || <em>Empty string</em>}</code></pre></td>
-								</tr>
-							) 
-						}
-						</tbody>
-					</table>
-				</div>
-
-				<div className='clipboard-section'>
-					<h2>
-						<a className='mdn' href='https://developer.mozilla.org/en-US/docs/Web/API/DataTransfer/items'>.items</a>
-						<span className='anno'>{render_data.items ? `${render_data.items.length} item(s) available` : <em>Undefined</em>}</span>
-					</h2>
-
-					{ 
-						render_data.items ? 
-							<table>
-								<thead>
-									<tr>
-										<th>kind</th>
-										<th>type</th>
-										<th>
-											<a className='mdn' href='https://developer.mozilla.org/en-US/docs/Web/API/DataTransferItem/getAsFile'>getAsFile()</a>
-										</th>
-									</tr>
-								</thead>
-								<tbody>
-									{ 
-										render_data.items.map(
-											(item, idx) => 
-												<tr key={idx}>
-													<td><code>{item.kind}</code></td>
-													<td><code>{item.type}</code></td>
-													<td>
-														{this.render_file(item.as_file)}
-													</td>
-												</tr>
-										)
-									}
-								</tbody>
-							</table>
-							:
-							null
-					}
-
-				</div>
-
-				<div className='clipboard-section'>
-					<h2>
-						<a className='mdn' href='https://developer.mozilla.org/en-US/docs/Web/API/DataTransfer/files'>.files</a>
-						<span className='anno'>{render_data.files ? `${render_data.files.length} file(s) available` : '<em>Undefined</em>'}</span>
-					</h2>
-					{ 
-						render_data.files ? 
-							render_data.files.map(
-								(file, idx) => 
-									<div key={idx}>
-										{this.render_file(file)}
-									</div>
-							)
-							:
-							<span>N/A</span>
-					}
-				</div>
-			</div> 
-
-			: 
-
-			<div className='intro-msg'>Paste (<kbd>Ctrl+V</kbd>, <kbd>⌘V</kbd>) or <kbd>drop↓</kbd> something here.</div>;
-	}
+function format(input) {
+  try {
+    return prettier.format(input || "", {
+      parser: "html",
+      plugins: [parserHtml]
+    });
+  } catch (e) {
+    console.error(e);
+    return input;
+  }
 }
 
-var app_el = document.getElementById('app');
+function copyToClipboard(data) {
+  // chrome can throw an exception if the document isnt focused
+  // while trying to programmatically copy
+  document.body.focus();
+  navigator.clipboard.writeText(data).then(
+    function() {
+      console.log("copied");
+    },
+    function(e) {
+      console.error("failed to copy", e.message);
+    }
+  );
+}
 
-function render(data, label) {
-	ReactDOM.render(
-		<ClipboardInspector data_transfer={data} label={label}/>, 
-		app_el
-	);
-} 
+function prevent(e) {
+  e.preventDefault();
+}
 
-render();
+function processEvent(dataTransfer) {
+  return {
+    data_by_type: Array.from(dataTransfer.types).map(type => {
+      let data = dataTransfer.getData(type);
+      return {
+        type,
+        data,
+        formattedData: format(data)
+      };
+    }),
+    items: dataTransfer.items
+      ? Array.from(dataTransfer.items).map(item => {
+          return {
+            kind: item.kind,
+            type: item.type,
+            as_file: file_info(item.getAsFile())
+          };
+        })
+      : null,
+    files: dataTransfer.files
+      ? Array.from(dataTransfer.files).map(file => file_info(file))
+      : null
+  };
+}
 
-document.addEventListener('paste', e => {
-	render(e.clipboardData, 'clipboardData');
-});
+function ClipboardInspectorr() {
+  const [clipboardData, setClipboardData] = useState(null);
 
-document.addEventListener('dragover', e => {
- 	e.preventDefault();
-});
+  useEffect(() => {
+    function handlePaste(e) {
+      e.preventDefault();
+      setClipboardData({
+        summary: processEvent(e.clipboardData),
+        label: "clipboardData"
+      });
+    }
 
-document.addEventListener('drop', e => {
-	console.log(e);
-	render(e.dataTransfer, 'dataTransfer');
-	e.preventDefault();
-});
+    function handleDrop(e) {
+      e.preventDefault();
+      setClipboardData({
+        summary: processEvent(e.dataTransfer),
+        label: "dataTransfer"
+      });
+    }
+
+    document.addEventListener("paste", handlePaste);
+    document.addEventListener("dragover", prevent);
+    document.addEventListener("drop", handleDrop);
+
+    return () => {
+      document.removeEventListener("paste", handlePaste);
+      document.removeEventListener("dragover", prevent);
+      document.removeEventListener("drop", handleDrop);
+    };
+  }, []);
+
+  return clipboardData ? (
+    <ClipboardSummary {...clipboardData} />
+  ) : (
+    <div className="intro-msg">
+      Paste (<kbd>Ctrl+V</kbd>, <kbd>⌘V</kbd>) or <kbd>drop↓</kbd> something
+      here.
+    </div>
+  );
+}
+
+function ClipboardSummary({ summary, label }) {
+  const [formatByType, setFormatByType] = useState(false);
+  return (
+    <div className="clipboard-summary">
+      <h1>
+        <a
+          className="mdn"
+          href="https://developer.mozilla.org/en-US/docs/Web/API/DataTransfer"
+        >
+          event.{label}
+        </a>{" "}
+        contains:
+      </h1>
+
+      <div className="clipboard-section">
+        <h2>
+          <a
+            className="mdn"
+            href="https://developer.mozilla.org/en-US/docs/Web/API/DataTransfer/types"
+          >
+            .types
+          </a>
+          <span className="anno">
+            {summary.data_by_type.length} type(s) available
+          </span>
+        </h2>
+        <table>
+          <thead>
+            <tr>
+              <th>type</th>
+              <th>
+                <a
+                  className="mdn"
+                  href="https://developer.mozilla.org/en-US/docs/Web/API/DataTransfer/getData"
+                >
+                  getData(type)
+                </a>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {summary.data_by_type.map((obj, idx) => (
+              <tr key={idx}>
+                <td>
+                  <code>{obj.type}</code>
+                  {obj.type === "text/html" && (
+                    <div>
+                      <button
+                        className="action-button"
+                        onClick={() => {
+                          setFormatByType({
+                            [obj.type]: !formatByType[obj.type]
+                          });
+                        }}
+                      >
+                        {formatByType[obj.type] ? "Minify" : "Pretty print"}
+                      </button>
+                    </div>
+                  )}
+                  <div>
+                    <button
+                      className="action-button"
+                      onClick={() =>
+                        copyToClipboard(
+                          formatByType[obj.type] ? obj.formattedData : obj.data
+                        )
+                      }
+                    >
+                      Copy raw data
+                    </button>
+                  </div>
+                </td>
+                <td>
+                  <pre>
+                    <code>
+                      {formatByType[obj.type]
+                        ? obj.formattedData
+                        : obj.data || <em>Empty string</em>}
+                    </code>
+                  </pre>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="clipboard-section">
+        <h2>
+          <a
+            className="mdn"
+            href="https://developer.mozilla.org/en-US/docs/Web/API/DataTransfer/items"
+          >
+            .items
+          </a>
+          <span className="anno">
+            {summary.items ? (
+              `${summary.items.length} item(s) available`
+            ) : (
+              <em>Undefined</em>
+            )}
+          </span>
+        </h2>
+
+        {summary.items ? (
+          <table>
+            <thead>
+              <tr>
+                <th>kind</th>
+                <th>type</th>
+                <th>
+                  <a
+                    className="mdn"
+                    href="https://developer.mozilla.org/en-US/docs/Web/API/DataTransferItem/getAsFile"
+                  >
+                    getAsFile()
+                  </a>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {summary.items.map((item, idx) => (
+                <tr key={idx}>
+                  <td>
+                    <code>{item.kind}</code>
+                  </td>
+                  <td>
+                    <code>{item.type}</code>
+                  </td>
+                  <td>
+                    <File file={item.as_file} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : null}
+      </div>
+
+      <div className="clipboard-section">
+        <h2>
+          <a
+            className="mdn"
+            href="https://developer.mozilla.org/en-US/docs/Web/API/DataTransfer/files"
+          >
+            .files
+          </a>
+          <span className="anno">
+            {summary.files
+              ? `${summary.files.length} file(s) available`
+              : "<em>Undefined</em>"}
+          </span>
+        </h2>
+        {summary.files ? (
+          summary.files.map((file, idx) => <File key={idx} file={file} />)
+        ) : (
+          <span>N/A</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function File({ file }) {
+  return file ? (
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Size</th>
+          <th>Type</th>
+          <th>
+            <a
+              className="mdn"
+              href="https://developer.mozilla.org/en-US/docs/Web/API/URL/createObjectURL"
+            >
+              URL.createObjectURL(file)
+            </a>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <code>{file.name}</code>
+          </td>
+          <td>
+            <code>{file.size}</code>
+          </td>
+          <td>
+            <code>{file.type}</code>
+          </td>
+          <td>
+            <code>
+              <a href={file.url}>
+                <img src={file.url} />
+              </a>
+            </code>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  ) : (
+    <em>N/A</em>
+  );
+}
+
+ReactDOM.render(<ClipboardInspectorr />, document.getElementById("app"));
